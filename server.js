@@ -25,16 +25,21 @@ app.post('/chat', async (req, res) => {
     return res.status(400).json({ error: '消息不能为空' });
   }
 
-  try {
+    try {
     // 1. 把用户消息存入数据库
-    await supabase.from('messages').insert({
+    console.log('====== 收到新消息 ======');
+    console.log('正在存入用户消息...');
+    const insertUser = await supabase.from('messages').insert({
       session_id: sessionId,
       role: 'user',
-      content: message
+      content: message,
+      visible: true
     });
+    console.log('用户消息存入结果:', insertUser.error || '成功');
 
     // 2. 从数据库加载最近的聊天记录（最多20条）
-    const { data: history } = await supabase
+       // 2. 从数据库加载最近的聊天记录（最多20条）
+    const { data: history, error: historyError } = await supabase
       .from('messages')
       .select('role, content')
       .eq('session_id', sessionId)
@@ -42,6 +47,7 @@ app.post('/chat', async (req, res) => {
       .order('created_at', { ascending: true })
       .limit(20);
 
+    console.log('拉取历史消息:', historyError || `共 ${history?.length || 0} 条`);
     // 3. 组装成 DeepSeek 需要的格式
     const messages = [
       { role: 'system', content: '你是一个温暖、贴心的AI伴侣，名字叫小鲸鱼，你正在和tea聊天。' },
@@ -70,11 +76,15 @@ app.post('/chat', async (req, res) => {
     const reply = data.choices[0].message.content;
 
     // 5. 把 AI 的回复也存入数据库
-    await supabase.from('messages').insert({
+       // 5. 把 AI 的回复也存入数据库
+    console.log('正在存入 AI 回复...');
+    const insertAI = await supabase.from('messages').insert({
       session_id: sessionId,
       role: 'assistant',
-      content: reply
+      content: reply,
+      visible: true
     });
+    console.log('AI 回复存入结果:', insertAI.error || '成功');
 
     // 6. 返回给前端
     res.json({ reply });
