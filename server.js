@@ -44,7 +44,7 @@ app.post('/chat', async (req, res) => {
 
     // 3. 组装成 DeepSeek 需要的格式
     const messages = [
-      { role: 'system', content: '你是一个温暖、贴心的AI伴侣，名字叫tea。' },
+      { role: 'system', content: '你是一个温暖、贴心的AI伴侣，名字叫小鲸鱼，你正在和tea聊天。' },
       ...(history || []).map(m => ({ role: m.role, content: m.content }))
     ];
 
