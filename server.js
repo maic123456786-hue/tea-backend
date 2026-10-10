@@ -108,13 +108,18 @@ app.post('/chat', async (req, res) => {
     ];
 
     // 5. 调 DeepSeek
-    const response = await fetch('https://api.deepseek.com/chat/completions', {
+        const response = await fetch('https://api.deepseek.com/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.DEEPSEEK_API_KEY}`
       },
-      body: JSON.stringify({ model: 'deepseek-chat', messages, temperature: 0.7 })
+      body: JSON.stringify({
+        model: 'deepseek-v4-pro',
+        messages: messages,
+        temperature: 0.7,
+        thinking: { type: 'enabled' }
+      })
     });
 
     if (!response.ok) throw new Error(`DeepSeek 报错: ${response.status}`);
