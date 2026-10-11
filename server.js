@@ -137,7 +137,10 @@ app.post('/chat', async (req, res) => {
     // 7. 触发记忆压缩（异步，不影响回复）
     compressMemory(sessionId);
 
-    res.json({ reply });
+        res.json({
+      reply: reply,
+      reasoning: data.choices[0].message.reasoning_content || ''
+    });
 
   } catch (error) {
     console.error('聊天出错:', error);
