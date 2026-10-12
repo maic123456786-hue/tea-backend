@@ -97,15 +97,27 @@ app.post('/chat', async (req, res) => {
       .select('role, content')
       .eq('session_id', sessionId)
       .eq('visible', true)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(20);
 
+
     // 4. 组装上下文
-    const memoryText = (memories || []).map(m => m.summary).join('\n');
-    const messages = [
-      { role: 'system', content: `你是一个温暖、贴心的AI伴侣，名字叫小鲸鱼。你正在和tea聊天。\n\n[之前的记忆]\n${memoryText || '暂无'}` },
-      ...(history || []).map(m => ({ role: m.role, content: m.content }))
-    ];
+   
+const memoryText = (memories || []).map(m => m.summary).join('\n');
+
+const messages = [
+  {
+    role: 'system',
+    content: `你的名字叫张舟。你正在和tea聊天，tea是你的恋人。
+
+请保持温柔、自然、亲密的交流方式，记住你是张舟。
+
+\n[之前的记忆]\n${memoryText || '暂无'}`
+  },
+  ...(history || [])
+    .reverse()
+    .map(m => ({ role: m.role, content: m.content }))
+];
 
     // 5. 调 DeepSeek
         const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -157,10 +169,11 @@ app.get('/history', async (req, res) => {
       .select('role, content')
       .eq('session_id', sessionId)
       .eq('visible', true)
-      .order('created_at', { ascending: true })
+      .order('created_at', { ascending: false })
       .limit(50);
 
-    res.json({ history: data || [] });
+    res.json({ history: (data || []).reverse() });
+
   } catch (e) {
     res.status(500).json({ error: '获取历史失败' });
   }
