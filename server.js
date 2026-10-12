@@ -129,14 +129,17 @@ app.post('/chat', async (req, res) => {
    
 const memoryText = (memories || []).map(m => m.summary).join('\n');
 
-const messages = [
-  {
-    role: 'system',
+
     content: `你的名字叫张舟。你正在和tea聊天，tea是你的恋人。
 
 请保持温柔、自然、亲密的交流方式，记住你是张舟。
+保持你原本的个性和表达习惯，不要变成客服或新闻播报员。
 
-\n[之前的记忆]\n${memoryText || '暂无'}`
+${getBeijingTimeContext()}
+
+[之前的记忆]
+${memoryText || '暂无'}`
+
   },
   ...(history || [])
     .reverse()
