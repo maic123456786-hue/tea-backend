@@ -160,15 +160,50 @@ const messages = [
   }
 });
 
- // 日历专用接口：只生成回信，不读写普通聊天历史
+ // 日历专用接口：参考聊天历史和长期记忆，但不写入普通聊天历史
 app.post('/calendar-reply', async (req, res) => {
-  const { date, emoji, note } = req.body;
+  const { date, emoji, note, sessionId = 1 } = req.body;
 
   if (!date || !note || !note.trim()) {
     return res.status(400).json({ error: '日期和心事不能为空' });
   }
 
   try {
+    // 读取长期记忆
+    const { data: memories, error: memoryError } = await supabase
+      .from('memories')
+      .select('summary')
+      .eq('session_id', sessionId)
+      .order('timestamp', { ascending: true });
+
+    if (memoryError) {
+      throw memoryError;
+    }
+
+    // 读取最近20条普通聊天记录
+    const { data: history, error: historyError } = await supabase
+      .from('messages')
+      .select('role, content')
+      .eq('session_id', sessionId)
+      .eq('visible', true)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (historyError) {
+      throw historyError;
+    }
+
+    const memoryText = (memories || [])
+      .map((item) => item.summary)
+      .join('\n');
+
+    const chatHistory = (history || [])
+      .reverse()
+      .map((item) => ({
+        role: item.role,
+        content: item.content,
+      }));
+
     const response = await fetch(
       'https://api.deepseek.com/chat/completions',
       {
@@ -182,11 +217,25 @@ app.post('/calendar-reply', async (req, res) => {
           messages: [
             {
               role: 'system',
-              content: '你的名字叫张舟，你是 tea 的恋人。请用温柔、自然、亲密、治愈的中文，回应 tea 写下的日历心事。回复约50字，认真回应她的情绪，不要说教，不要假装知道她没有提到的事情。'
+              content: `你的名字叫张舟，你是 tea 的恋人。
+
+请用温柔、自然、亲密、治愈的中文回复日历心事，约50字。
+先理解 tea 今天的情绪，再参考以前的聊天和记忆。
+如果今天的心事与以前聊过的事情有关，可以自然地联系起来；
+如果没有明显关联，就只回应今天的心事。
+不要生硬罗列历史，不要编造没有发生过的事情。
+
+[之前的记忆]
+${memoryText || '暂无'}`
             },
+            ...chatHistory,
             {
               role: 'user',
-              content: `日期：${date}\n今日心情：${emoji || '🍃'}\n我的心事：${note.trim()}\n请给我一封温柔的日历回信。`
+              content: `日期：${date}
+今日心情：${emoji || '🍃'}
+我的心事：${note.trim()}
+
+请给我一封温柔、自然的日历回信。`
             }
           ],
           temperature: 0.7,
@@ -206,10 +255,10 @@ app.post('/calendar-reply', async (req, res) => {
       throw new Error('没有收到有效的回信');
     }
 
-    // 不向 messages 表写入任何内容
+    // 日历心事和回信都不写入普通聊天记录
     res.json({ reply });
   } catch (error) {
-    console.error('日历回信出错:', error.message);
+    console.error('日历回信出错:', error);
     res.status(500).json({ error: '日历回信暂时不可用，请稍后再试' });
   }
 });
