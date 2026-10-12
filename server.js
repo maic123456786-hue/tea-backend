@@ -6,6 +6,30 @@ const cors = require('cors');
 app.use(cors());
 app.use(express.json());
 
+function getBeijingTimeContext() {
+  const now = new Date();
+
+  const dateTime = new Intl.DateTimeFormat('zh-CN', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'long',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(now);
+
+  return `【当前现实时间】
+中国北京时间：${dateTime}
+请以这个时间为准理解今天、昨天、明天、早上、晚上等表达。
+不要把系统运行环境的时区当成北京时间。
+如果用户问当前时间，可以自然地直接回答；
+如果话题与时间无关，不必刻意提及时间。`;
+}
+
+
 const supabase = createClient(
   process.env.SUPABASEURL,
   process.env.SUPABASEKEY
